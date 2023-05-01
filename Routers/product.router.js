@@ -2,7 +2,7 @@ const express = require("express");
 const { ProductModel } = require("../Models/products.model");
 const { authenticate } = require("../Middelwares/admin.authentication.middelwres");
 // const { query } = require("express");
-
+const {AdminAuth, UserAuth}=require("../Middelwares/auth.middleware")
 // const app = express();
 const ProductRouter = express.Router();
 
@@ -27,15 +27,22 @@ ProductRouter.get("/", async (req, res) => {
         res.send({ "get_msg": error })
     }
 })
-ProductRouter.get("/search", async (req,res) => {
+ProductRouter.get('/search', async (req, res) => {
+    const payload = req.query;
+    if (payload.title) {
+        let title = payload.title.toLowerCase();
+        try {
+            const products = await ProductModel.find({ title: { $regex: '(?i)' + title } });
+            return res.send(products)
+        } catch (error) {
+            return res.send({ message: error.message })
+        }
+    }
     try {
-        const searchTerm = req.query.title;
-        const data = await ProductModel.find({ title: { $regex: new RegExp(searchTerm, "i") } });
-        res.send(data);
-
-
+        const products = await ProductModel.find(payload)
+        res.send(products)
     } catch (error) {
-        res.send({ "msg": error })
+        res.status(500).send({ message: error.message })
     }
 })
 
@@ -78,12 +85,12 @@ ProductRouter.get("/rating", async (req,res) => {
         let rating = req.query.rating;
         if (rating === "top") {
             const data = await ProductModel.find().sort({ rating: -1 })
-            res.send(data)
+           return res.send(data)
         } 
-        // else {
-        //     const data = await ProductModel.find().sort({ rating: 1 })
-        //     res.send(data)
-        // }
+        else {
+            const data = await ProductModel.find().sort({ rating: 1 })
+            return res.send(data)
+        }
 
 
     } catch (error) {
@@ -92,9 +99,8 @@ ProductRouter.get("/rating", async (req,res) => {
 })
 
 
-ProductRouter.use(authenticate)
 
-ProductRouter.get("/admin/:id", async (req, res) => {
+ProductRouter.get("/admin/:id",authenticate,AdminAuth, async (req, res) => {
     // const adminId=req.body.adminId;
     const adminId = req.params.id;
     try {
@@ -114,7 +120,7 @@ ProductRouter.get("/admin/:id", async (req, res) => {
         res.send({ "admin_get_req": error })
     }
 })
-ProductRouter.post("/create", async (req, res) => {
+ProductRouter.post("/create",authenticate,AdminAuth, async (req, res) => {
     const payload = req.body;
     // const post_id=req.body.adminId;
     try {
@@ -128,7 +134,7 @@ ProductRouter.post("/create", async (req, res) => {
 
     }
 })
-ProductRouter.patch("/update/:id", async (req, res) => {
+ProductRouter.patch("/update/:id",authenticate,AdminAuth, async (req, res) => {
     const payload = req.body;
     const id = req.params.id;
     const data = await ProductModel.findOne({ _id: id });
@@ -146,7 +152,7 @@ ProductRouter.patch("/update/:id", async (req, res) => {
 
     }
 })
-ProductRouter.delete("/delete/:id", async (req, res) => {
+ProductRouter.delete("/delete/:id",authenticate,AdminAuth, async (req, res) => {
     const id = req.params.id;
     const data = await ProductModel.findOne({ _id: id });
     const admin_id = data.adminId;
