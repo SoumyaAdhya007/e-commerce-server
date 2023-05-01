@@ -71,7 +71,7 @@ UserRouter.post("/login",async (req,res)=>{
                     res.status(200).cookie('token', token);
                     res.status(200).send({"msg":"Login Succesfuly","token":token})
                 }else{
-                    res.status(400).send("Wrong Credentials")
+                    res.status(400).send({"msg":"Wrong Credentials"})
                 }
             });
         }else{
